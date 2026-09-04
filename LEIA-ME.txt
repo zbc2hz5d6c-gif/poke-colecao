@@ -1,0 +1,18 @@
+POKÉ COLEÇÃO — versão inicial
+
+1) Abra index.html em um navegador com internet.
+2) O app busca automaticamente as cartas das 5 expansões na API aberta TCGdex.
+3) Marque "Tenho", quantidade, favorito e valor estimado.
+4) Os dados ficam salvos no dispositivo.
+
+Para instalar como aplicativo/PWA no iPhone, o conteúdo precisa ser servido por HTTPS.
+A forma mais simples é publicar estes arquivos em um serviço de hospedagem estática (por exemplo, GitHub Pages) e então usar "Adicionar à Tela de Início" no Safari.
+
+5 expansões:
+- Mega Evolution—Pitch Black
+- Mega Evolution—Chaos Rising
+- Mega Evolution—Perfect Order
+- Mega Evolution—Ascended Heroes
+- Mega Evolution—Phantasmal Flames
+
+Fonte dos dados: TCGdex (API aberta).
