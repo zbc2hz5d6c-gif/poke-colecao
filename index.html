@@ -64,59 +64,97 @@ footer{font-size:12px;color:#6b7280;margin-top:18px;line-height:1.5}
 
 <script>
 const API='https://api.tcgdex.net/v2/en';
-const USD_BRL=5.1025; // referência de 04/09/2026; o usuário pode sobrescrever o valor da carta
-const TARGET_SETS=5;
-let sets=[],active=0,db=JSON.parse(localStorage.getItem('pokeColecaoV1')||'{}');
+const USD_BRL=5.1025;
+
+// As of 04/09/2026 these are the five latest released English expansions.
+// The IDs are the stable TCGdex set IDs.
+const SET_DEFS=[
+  {id:'me5', name:'Mega Evolution—Pitch Black', pt:'Escuridão Absoluta', total:120, release:'17/07/2026'},
+  {id:'me4', name:'Mega Evolution—Chaos Rising', pt:'Caos Ascendente', total:122, release:'22/05/2026'},
+  {id:'me3', name:'Mega Evolution—Perfect Order', pt:'Ordem Perfeita', total:124, release:'27/03/2026'},
+  {id:'me2.5', name:'Mega Evolution—Ascended Heroes', pt:'Heróis Excelsos', total:295, release:'30/01/2026'},
+  {id:'me2', name:'Mega Evolution—Phantasmal Flames', pt:'Chamas Fantasmagóricas', total:130, release:'14/11/2025'}
+];
+
+let sets=SET_DEFS.map(x=>({...x,cards:[]}));
+let active=0;
+let db=JSON.parse(localStorage.getItem('pokeColecaoV2')||'{}');
 
 const $=s=>document.querySelector(s);
 const brl=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-const save=()=>localStorage.setItem('pokeColecaoV1',JSON.stringify(db));
-function key(c){return c.id}
-function ensure(c){if(!db[key(c)])db[key(c)]={have:false,qty:0,fav:false,value:0};return db[key(c)]}
-function norm(s){return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
-async function load(){
-  try{
-    const all=await fetch(API+'/sets').then(r=>r.json());
-    // A API fornece a data de lançamento; usamos as 5 expansões mais recentes.
-    const recent=all.filter(s=>s.releaseDate).sort((a,b)=>String(b.releaseDate).localeCompare(String(a.releaseDate))).slice(0,TARGET_SETS);
-    sets=[];
-    for(const brief of recent){
-      const detail=await fetch(API+'/sets/'+encodeURIComponent(brief.id)).then(r=>r.json());
-      detail.cards=detail.cards||[];
-      detail.total=detail.cards.length||detail.cardCount?.total||0;
-      sets.push(detail);
-    }
-    if(!sets.length)throw new Error('Nenhum conjunto encontrado');
-    $('#notice').innerHTML='Preços estimados em R$ são calculados automaticamente a partir do preço de mercado TCGplayer quando disponível; a conversão usada nesta versão é <b>US$ 1 = R$ 5,1025</b>. O câmbio de referência de 03/09/2026 do Banco Central foi R$ 5,0956–R$ 5,0962. <button id="hideNotice" style="float:right;border:0;background:transparent;font-size:18px">×</button>';
-    $('#hideNotice').onclick=()=>$('#notice').style.display='none';
-    render();
-  }catch(e){
-    $('#notice').textContent='Não foi possível carregar as cartas agora. Verifique a internet e abra novamente.';
-    if(!sets.length)sets=[];
-    render();
-  }
+const save=()=>localStorage.setItem('pokeColecaoV2',JSON.stringify(db));
+function ensure(c){
+  if(!db[c.id])db[c.id]={have:false,qty:0,fav:false,value:0,market:0};
+  return db[c.id];
 }
 function getMarketUSD(c){
   const p=c.pricing?.tcgplayer;
   if(!p)return null;
-  const variants=['normal','reverse','holofoil','reverse-holofoil','1st-edition','1st-edition-holofoil','unlimited','unlimited-holofoil'];
-  for(const v of variants){
-    const x=p[v];
-    if(x&&typeof x.marketPrice==='number')return x.marketPrice;
+  for(const v of ['normal','reverse','holo','reverse-holofoil','holofoil']){
+    if(p[v] && typeof p[v].marketPrice==='number') return p[v].marketPrice;
   }
   if(typeof p.marketPrice==='number')return p.marketPrice;
   return null;
 }
 function automaticPriceBRL(c){
   const usd=getMarketUSD(c);
-  if(usd!=null)return usd*USD_BRL;
-  const cm=c.pricing?.cardmarket;
-  if(cm&&typeof cm.avg==='number')return cm.avg*USD_BRL; // fallback aproximado; moeda original é EUR
-  return 0;
+  return usd==null?0:usd*USD_BRL;
 }
 function estimatedPrice(c){
   const d=ensure(c);
-  return d.value>0?d.value:automaticPriceBRL(c);
+  return Number(d.value)>0?Number(d.value):automaticPriceBRL(c);
+}
+
+async function fetchJSON(url){
+  const r=await fetch(url,{cache:'no-store'});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  return r.json();
+}
+
+async function load(){
+  $('#notice').textContent='Carregando listas de cartas…';
+  try{
+    // First load each set. This is fast and lets the app render immediately.
+    for(const s of sets){
+      const detail=await fetchJSON(API+'/sets/'+encodeURIComponent(s.id));
+      s.cards=(detail.cards||[]).map(c=>({...c,setId:s.id}));
+      s.total=detail.cardCount?.total||s.total||s.cards.length;
+    }
+    $('#notice').style.display='none';
+    render();
+
+    // Then enrich cards with full data/pricing in small batches.
+    enrichPricing();
+  }catch(e){
+    console.error(e);
+    $('#notice').innerHTML='⚠️ Não consegui acessar a base de cartas. <b>Verifique se o iPhone está conectado à internet</b> e recarregue a página.';
+    render();
+  }
+}
+
+async function enrichPricing(){
+  const all=sets.flatMap(s=>s.cards);
+  const batchSize=8;
+  for(let i=0;i<all.length;i+=batchSize){
+    const batch=all.slice(i,i+batchSize);
+    await Promise.all(batch.map(async c=>{
+      try{
+        const full=await fetchJSON(API+'/cards/'+encodeURIComponent(c.id));
+        Object.assign(c,full);
+      }catch(e){}
+    }));
+    if(i%40===0)render();
+  }
+  render();
+}
+
+function totals(){
+  let total=sets.reduce((a,s)=>a+s.total,0),owned=0,value=0;
+  sets.forEach(s=>s.cards.forEach(c=>{
+    const d=ensure(c);
+    if(d.have){owned++;value+=estimatedPrice(c)*(Number(d.qty)||1);}
+  }));
+  return {total,owned,value};
 }
 function totals(){
   let total=sets.reduce((a,s)=>a+s.total,0),owned=0,value=0;
@@ -156,7 +194,7 @@ function renderCards(){
     if(filter==='owned'&&!d.have)continue;
     if(filter==='missing'&&d.have)continue;
     if(filter==='favorite'&&!d.fav)continue;
-    const img=imageFor(c);
+    const img=imageFor(c); const ep=estimatedPrice(c);
     html+=`<article class="card">
       ${img?`<img src="${img}" alt="${name}" loading="lazy" onerror="this.style.display='none'">`:`<div style="aspect-ratio:.716;background:#eef2f7;display:grid;place-items:center;color:#6b7280">Imagem indisponível</div>`}
       <div class="cardbody">
@@ -167,7 +205,7 @@ function renderCards(){
           <button data-fav="${c.id}">${d.fav?'⭐':'☆'}</button>
         </div>
         <input class="qty" data-qty="${c.id}" type="number" min="0" max="99" value="${d.qty||0}" aria-label="Quantidade">
-        <div style="font-size:12px;margin-top:6px"><b>Estimado:</b> ${brl(estimatedPrice(c))}</div>
+        <div style="font-size:12px;margin-top:6px"><b>Estimado:</b> ${ep>0?brl(ep):'sem cotação'}</div>
         <input class="qty" data-value="${c.id}" type="number" min="0" step=".01" value="${d.value||''}" placeholder="Valor próprio (opcional)" aria-label="Valor próprio">
       </div></article>`;
   }
