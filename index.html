@@ -32,11 +32,11 @@ footer{font-size:12px;color:#6b7280;margin-top:18px;line-height:1.5}
   <div class="pill">Mika</div>
 </header>
 
-<div id="notice" class="notice">Carregando as cartas reais das coleções…</div>
+<div id="notice" class="notice">Conectando à base de cartas…</div>
 
 <section class="stats">
   <div class="stat"><div class="muted">Tenho</div><div id="owned" class="big">0</div></div>
-  <div class="stat"><div class="muted">Faltam</div><div id="missing" class="big">801</div></div>
+  <div class="stat"><div class="muted">Faltam</div><div id="missing" class="big">—</div></div>
   <div class="stat"><div class="muted">Progresso</div><div id="pct" class="big">0%</div></div>
   <div class="stat"><div class="muted">Valor</div><div id="value" class="big">R$ 0</div></div>
 </section>
@@ -57,43 +57,47 @@ footer{font-size:12px;color:#6b7280;margin-top:18px;line-height:1.5}
 </section>
 
 <footer>
-  Os dados das cartas e imagens são carregados da base aberta TCGdex. O aplicativo salva o controle de “Tenho”, quantidade, favoritos e valor no próprio dispositivo.
-  Os preços são editáveis pelo usuário e servem como estimativa de coleção, não como cotação garantida.
+  Dados das cartas e imagens: TCGdex. O aplicativo salva “Tenho”, quantidade, favoritos e valor no próprio dispositivo.
+  Preços são estimativas de mercado e podem estar indisponíveis para cartas novas.
 </footer>
 </div>
 
 <script>
 const API='https://api.tcgdex.net/v2/en';
 const USD_BRL=5.1025;
+const STORAGE='pokeColecaoV4';
 
-// As of 04/09/2026 these are the five latest released English expansions.
-// The IDs are the stable TCGdex set IDs.
-const SET_DEFS=[
-  {id:'me5', name:'Mega Evolution—Pitch Black', pt:'Escuridão Absoluta', total:120, release:'17/07/2026'},
-  {id:'me4', name:'Mega Evolution—Chaos Rising', pt:'Caos Ascendente', total:122, release:'22/05/2026'},
-  {id:'me3', name:'Mega Evolution—Perfect Order', pt:'Ordem Perfeita', total:124, release:'27/03/2026'},
-  {id:'me2.5', name:'Mega Evolution—Ascended Heroes', pt:'Heróis Excelsos', total:295, release:'30/01/2026'},
-  {id:'me2', name:'Mega Evolution—Phantasmal Flames', pt:'Chamas Fantasmagóricas', total:130, release:'14/11/2025'}
+/* Nomes oficiais em inglês usados pela base TCGdex; a interface fica em português. */
+const WANTED=[
+  {match:'Mega Evolution—Pitch Black', pt:'Escuridão Absoluta', release:'17/07/2026'},
+  {match:'Mega Evolution—Chaos Rising', pt:'Caos Ascendente', release:'22/05/2026'},
+  {match:'Mega Evolution—Perfect Order', pt:'Equilíbrio Perfeito', release:'27/03/2026'},
+  {match:'Mega Evolution—Ascended Heroes', pt:'Heróis Excelsos', release:'30/01/2026'},
+  {match:'Mega Evolution—Phantasmal Flames', pt:'Fogo Fantasmagórico', release:'14/11/2025'}
 ];
 
-let sets=SET_DEFS.map(x=>({...x,cards:[]}));
+let sets=[];
 let active=0;
-let db=JSON.parse(localStorage.getItem('pokeColecaoV2')||'{}');
+let db=JSON.parse(localStorage.getItem(STORAGE)||'{}');
 
 const $=s=>document.querySelector(s);
 const brl=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-const save=()=>localStorage.setItem('pokeColecaoV2',JSON.stringify(db));
+const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const save=()=>localStorage.setItem(STORAGE,JSON.stringify(db));
+
 function ensure(c){
-  if(!db[c.id])db[c.id]={have:false,qty:0,fav:false,value:0,market:0};
+  if(!db[c.id])db[c.id]={have:false,qty:0,fav:false,value:0};
   return db[c.id];
 }
 function getMarketUSD(c){
   const p=c.pricing?.tcgplayer;
   if(!p)return null;
-  for(const v of ['normal','reverse','holo','reverse-holofoil','holofoil']){
-    if(p[v] && typeof p[v].marketPrice==='number') return p[v].marketPrice;
+  for(const k of ['normal','reverse','holo','reverse-holofoil','holofoil']){
+    if(p[k] && typeof p[k].marketPrice==='number')return p[k].marketPrice;
   }
-  if(typeof p.marketPrice==='number')return p.marketPrice;
+  for(const k of ['marketPrice','market','mid']){
+    if(typeof p[k]==='number')return p[k];
+  }
   return null;
 }
 function automaticPriceBRL(c){
@@ -104,31 +108,51 @@ function estimatedPrice(c){
   const d=ensure(c);
   return Number(d.value)>0?Number(d.value):automaticPriceBRL(c);
 }
-
 async function fetchJSON(url){
   const r=await fetch(url,{cache:'no-store'});
   if(!r.ok)throw new Error('HTTP '+r.status);
   return r.json();
 }
+function findSet(all, wanted){
+  const exact=all.find(x=>norm(x.name)===norm(wanted.match));
+  if(exact)return exact;
+  return all.find(x=>norm(x.name).includes(norm(wanted.match)) || norm(wanted.match).includes(norm(x.name)));
+}
 
 async function load(){
-  $('#notice').textContent='Carregando listas de cartas…';
   try{
-    // First load each set. This is fast and lets the app render immediately.
-    for(const s of sets){
-      const detail=await fetchJSON(API+'/sets/'+encodeURIComponent(s.id));
-      s.cards=(detail.cards||[]).map(c=>({...c,setId:s.id}));
-      s.total=detail.cardCount?.total||s.total||s.cards.length;
+    $('#notice').textContent='Encontrando as 5 coleções mais recentes…';
+
+    // Importante: não dependemos de IDs hardcoded. A própria API informa o ID correto.
+    const allSets=await fetchJSON(API+'/sets');
+    const found=WANTED.map(w=>({w, api:findSet(allSets,w)}));
+
+    const missing=found.filter(x=>!x.api);
+    if(missing.length)throw new Error('Coleções não encontradas: '+missing.map(x=>x.w.match).join(', '));
+
+    sets=[];
+    for(const item of found){
+      $('#notice').textContent='Carregando '+item.w.pt+'…';
+      const detail=await fetchJSON(API+'/sets/'+encodeURIComponent(item.api.id));
+      sets.push({
+        id:item.api.id,
+        name:item.api.name,
+        pt:item.w.pt,
+        release:item.w.release,
+        total:detail.cardCount?.total || detail.cards?.length || 0,
+        cards:(detail.cards||[]).map(c=>({...c,setId:item.api.id}))
+      });
     }
+
     $('#notice').style.display='none';
     render();
 
-    // Then enrich cards with full data/pricing in small batches.
+    // Preços e dados completos são carregados em segundo plano.
     enrichPricing();
   }catch(e){
     console.error(e);
-    $('#notice').innerHTML='⚠️ Não consegui acessar a base de cartas. <b>Verifique se o iPhone está conectado à internet</b> e recarregue a página.';
-    render();
+    $('#notice').innerHTML='⚠️ Não consegui carregar as coleções. <b>Recarregue a página com internet ativa.</b><br><small>'+String(e.message||e)+'</small>';
+    if(sets.length)render();
   }
 }
 
@@ -136,12 +160,8 @@ async function enrichPricing(){
   const all=sets.flatMap(s=>s.cards);
   const batchSize=8;
   for(let i=0;i<all.length;i+=batchSize){
-    const batch=all.slice(i,i+batchSize);
-    await Promise.all(batch.map(async c=>{
-      try{
-        const full=await fetchJSON(API+'/cards/'+encodeURIComponent(c.id));
-        Object.assign(c,full);
-      }catch(e){}
+    await Promise.all(all.slice(i,i+batchSize).map(async c=>{
+      try{Object.assign(c,await fetchJSON(API+'/cards/'+encodeURIComponent(c.id)))}catch(e){}
     }));
     if(i%40===0)render();
   }
@@ -152,54 +172,45 @@ function totals(){
   let total=sets.reduce((a,s)=>a+s.total,0),owned=0,value=0;
   sets.forEach(s=>s.cards.forEach(c=>{
     const d=ensure(c);
-    if(d.have){owned++;value+=estimatedPrice(c)*(Number(d.qty)||1);}
+    if(d.have){owned++;value+=estimatedPrice(c)*(Number(d.qty)||1)}
   }));
   return {total,owned,value};
 }
-function totals(){
-  let total=sets.reduce((a,s)=>a+s.total,0),owned=0,value=0;
-  sets.forEach(s=>s.cards.forEach(c=>{let d=ensure(c);if(d.have){owned++;value+=estimatedPrice(c)*(Number(d.qty)||1)}}));
-  return {total,owned,value};
-}
 function renderTabs(){
-  $('#tabs').innerHTML=sets.map((s,i)=>`<button class="tab ${i===active?'active':''}" data-i="${i}">${s.name.replace('Mega Evolution—','')}</button>`).join('');
+  $('#tabs').innerHTML=sets.map((s,i)=>`<button class="tab ${i===active?'active':''}" data-i="${i}">${s.pt}</button>`).join('');
   $('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{active=+b.dataset.i;render()});
 }
 function render(){
+  if(!sets.length)return;
   renderTabs();
-  const s=sets[active],a=s.cards||[], owned=a.filter(c=>ensure(c).have).length,p=s.total?owned/s.total*100:0;
-  const t=totals();$('#owned').textContent=t.owned;$('#missing').textContent=t.total-t.owned;$('#pct').textContent=(t.owned/t.total*100).toFixed(1)+'%';$('#value').textContent=brl(t.value);
-  $('#setName').textContent=s.name.replace('Mega Evolution—','');$('#setMeta').textContent=`${owned} de ${s.total} cartas`;
-  $('#setPct').textContent=p.toFixed(1)+'%';$('#bar').style.width=p+'%';renderCards();
+  const s=sets[active],a=s.cards||[],owned=a.filter(c=>ensure(c).have).length,p=s.total?owned/s.total*100:0;
+  const t=totals();
+  $('#owned').textContent=t.owned;
+  $('#missing').textContent=t.total-t.owned;
+  $('#pct').textContent=t.total?(t.owned/t.total*100).toFixed(1)+'%':'0%';
+  $('#value').textContent=brl(t.value);
+  $('#setName').textContent=s.pt;
+  $('#setMeta').textContent=`${owned} de ${s.total} cartas • lançamento ${s.release}`;
+  $('#setPct').textContent=p.toFixed(1)+'%';
+  $('#bar').style.width=p+'%';
+  renderCards();
 }
-function imageFor(c){return c.image ? c.image.replace(/\\/$/,'')+'/high.webp' : ''}
-function priceFor(c){
-  const d=ensure(c);
-  if(d.value)return d.value;
-  const p=c.pricing?.tcgplayer;
-  if(p){
-    const candidates=[];
-    for(const k of ['marketPrice','market','mid']) if(typeof p[k]==='number')candidates.push(p[k]);
-    if(candidates.length)return candidates[0];
-  }
-  return 0;
-}
+function imageFor(c){return c.image?c.image.replace(/\/$/,'')+'/high.webp':''}
 function renderCards(){
-  const term=norm($('#search').value), filter=$('#filter').value,s=sets[active];
+  const term=norm($('#search').value),filter=$('#filter').value,s=sets[active];
   let html='';
   for(const c of s.cards){
-    const d=ensure(c), name=c.name||'Sem nome', id=c.localId||c.id;
-    const hay=norm(name+' '+id);
+    const d=ensure(c),name=c.name||'Sem nome',id=c.localId||c.id,hay=norm(name+' '+id);
     if(term&&!hay.includes(term))continue;
     if(filter==='owned'&&!d.have)continue;
     if(filter==='missing'&&d.have)continue;
     if(filter==='favorite'&&!d.fav)continue;
-    const img=imageFor(c); const ep=estimatedPrice(c);
+    const img=imageFor(c),ep=estimatedPrice(c),usd=getMarketUSD(c);
     html+=`<article class="card">
       ${img?`<img src="${img}" alt="${name}" loading="lazy" onerror="this.style.display='none'">`:`<div style="aspect-ratio:.716;background:#eef2f7;display:grid;place-items:center;color:#6b7280">Imagem indisponível</div>`}
       <div class="cardbody">
         <div class="num">#${id}</div><div class="name">${name}</div>
-        <div class="rarity">${c.rarity||'Raridade não informada'}${getMarketUSD(c)!=null?' • US$ '+getMarketUSD(c).toFixed(2):''}</div>
+        <div class="rarity">${c.rarity||'Raridade não informada'}${usd!=null?' • US$ '+usd.toFixed(2):''}</div>
         <div class="actions">
           <button class="${d.have?'have':''}" data-have="${c.id}">${d.have?'✅ Tenho':'＋ Tenho'}</button>
           <button data-fav="${c.id}">${d.fav?'⭐':'☆'}</button>
@@ -210,13 +221,26 @@ function renderCards(){
       </div></article>`;
   }
   $('#cards').innerHTML=html||'<div class="muted">Nenhuma carta encontrada.</div>';
-  $('#cards').querySelectorAll('[data-have]').forEach(b=>b.onclick=()=>{let d=ensure(findCard(b.dataset.have));d.have=!d.have;if(d.have&&!d.qty)d.qty=1;save();render()});
-  $('#cards').querySelectorAll('[data-fav]').forEach(b=>b.onclick=()=>{let d=ensure(findCard(b.dataset.fav));d.fav=!d.fav;save();renderCards()});
-  $('#cards').querySelectorAll('[data-qty]').forEach(i=>i.oninput=()=>{let d=ensure(findCard(i.dataset.qty));d.qty=Math.max(0,Math.min(99,Number(i.value)||0));save();render()});
-  $('#cards').querySelectorAll('[data-value]').forEach(i=>i.oninput=()=>{let d=ensure(findCard(i.dataset.value));d.value=Math.max(0,Number(i.value)||0);save();render()});
+  $('#cards').querySelectorAll('[data-have]').forEach(b=>b.onclick=()=>{
+    const c=findCard(b.dataset.have),d=ensure(c);d.have=!d.have;if(d.have&&!d.qty)d.qty=1;save();render();
+  });
+  $('#cards').querySelectorAll('[data-fav]').forEach(b=>b.onclick=()=>{
+    const c=findCard(b.dataset.fav),d=ensure(c);d.fav=!d.fav;save();renderCards();
+  });
+  $('#cards').querySelectorAll('[data-qty]').forEach(i=>i.oninput=()=>{
+    const c=findCard(i.dataset.qty),d=ensure(c);d.qty=Math.max(0,Math.min(99,Number(i.value)||0));d.have=d.qty>0;save();render();
+  });
+  $('#cards').querySelectorAll('[data-value]').forEach(i=>i.oninput=()=>{
+    const c=findCard(i.dataset.value),d=ensure(c);d.value=Math.max(0,Number(i.value)||0);save();render();
+  });
 }
-function findCard(id){for(const s of sets){const c=(s.cards||[]).find(x=>x.id===id);if(c)return c}return {id}}
-$('#search').oninput=renderCards;$('#filter').onchange=renderCards;
+function findCard(id){
+  for(const s of sets){const c=s.cards.find(x=>x.id===id);if(c)return c}
+  return {id};
+}
+$('#search').oninput=renderCards;
+$('#filter').onchange=renderCards;
 load();
 </script>
-</body></html>
+</body>
+</html>
