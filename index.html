@@ -1,246 +1,30 @@
-<!doctype html>
-<html lang="pt-BR">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111827">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Poké Coleção">
-<link rel="manifest" href="manifest.json">
+<!doctype html><html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827"><link rel="manifest" href="manifest.json">
 <title>Poké Coleção</title>
 <style>
-:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111827;background:#f5f7fb}
-*{box-sizing:border-box}body{margin:0}.wrap{max-width:1050px;margin:auto;padding:18px}
-header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
-h1,h2,h3,p{margin:0}.muted{color:#6b7280}.pill{padding:6px 10px;border-radius:999px;background:#eef2ff;font-size:12px}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}.stat,.panel{background:white;border:1px solid #e5e7eb;border-radius:16px;padding:14px}
-.big{font-size:25px;font-weight:800;margin-top:4px}.tabs{display:flex;gap:8px;overflow:auto;padding-bottom:8px}.tab{white-space:nowrap;border:1px solid #d1d5db;background:white;border-radius:12px;padding:10px 12px}.tab.active{background:#111827;color:white}
-.toolbar{display:flex;gap:8px;margin:10px 0}.toolbar input,.toolbar select{flex:1;min-width:0;padding:11px;border:1px solid #d1d5db;border-radius:11px;background:white;font-size:16px}
-.progress{height:9px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin-top:10px}.fill{height:100%;background:#111827;width:0}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:12px}
-.card{background:white;border:1px solid #e5e7eb;border-radius:15px;overflow:hidden}.card img{width:100%;display:block;aspect-ratio:0.716;object-fit:cover;background:#eef2f7}.cardbody{padding:9px}.num{font-size:12px;color:#6b7280}.name{font-weight:700;margin:2px 0}.rarity{font-size:12px;color:#6b7280;min-height:16px}.actions{display:flex;gap:6px;margin-top:8px}.actions button{flex:1;border:1px solid #d1d5db;background:white;border-radius:9px;padding:8px}.actions button.have{background:#dcfce7;border-color:#86efac}.qty{width:100%;padding:8px;border:1px solid #d1d5db;border-radius:8px;margin-top:6px}
-.notice{padding:12px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;margin:12px 0}
-footer{font-size:12px;color:#6b7280;margin-top:18px;line-height:1.5}
-@media(max-width:650px){.wrap{padding:12px}.stats{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.big{font-size:21px}}
-</style>
-</head>
-<body>
-<div class="wrap">
-<header>
-  <div><div class="muted">Organizador Pokémon TCG</div><h1>Poké Coleção ⚡</h1></div>
-  <div class="pill">Mika</div>
-</header>
-
-<div id="notice" class="notice">Conectando à base de cartas…</div>
-
-<section class="stats">
-  <div class="stat"><div class="muted">Tenho</div><div id="owned" class="big">0</div></div>
-  <div class="stat"><div class="muted">Faltam</div><div id="missing" class="big">—</div></div>
-  <div class="stat"><div class="muted">Progresso</div><div id="pct" class="big">0%</div></div>
-  <div class="stat"><div class="muted">Valor</div><div id="value" class="big">R$ 0</div></div>
-</section>
-
-<div id="tabs" class="tabs"></div>
-
-<section class="panel">
-  <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
-    <div><h2 id="setName">Carregando…</h2><div id="setMeta" class="muted"></div></div>
-    <strong id="setPct">0%</strong>
-  </div>
-  <div class="progress"><div id="bar" class="fill"></div></div>
-  <div class="toolbar">
-    <input id="search" placeholder="🔎 Buscar por nome ou número">
-    <select id="filter"><option value="all">Todas</option><option value="missing">Faltam</option><option value="owned">Tenho</option><option value="favorite">⭐ Favoritas</option></select>
-  </div>
-  <div id="cards" class="cards"></div>
-</section>
-
-<footer>
-  Dados das cartas e imagens: TCGdex. O aplicativo salva “Tenho”, quantidade, favoritos e valor no próprio dispositivo.
-  Preços são estimativas de mercado e podem estar indisponíveis para cartas novas.
-</footer>
-</div>
-
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:#f5f7fb;color:#111827}.wrap{max-width:1050px;margin:auto;padding:14px}
+header{display:flex;justify-content:space-between;align-items:center}.muted{color:#6b7280}.pill{background:#eef2ff;padding:7px 11px;border-radius:20px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.box,.panel{background:#fff;border:1px solid #e5e7eb;border-radius:15px;padding:13px}.big{font-size:23px;font-weight:800}
+input,select{padding:11px;border:1px solid #d1d5db;border-radius:10px;font-size:16px;background:white;width:100%;box-sizing:border-box}.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.sets{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}.set{background:white;border:1px solid #ddd;border-radius:12px;padding:10px;text-align:left}.set img{width:100%;height:50px;object-fit:contain}.set b{display:block;margin-top:4px}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px;margin-top:10px}.card{background:#fff;border:1px solid #ddd;border-radius:13px;overflow:hidden}.card img{width:100%;aspect-ratio:.716;object-fit:cover}.body{padding:8px}.actions{display:flex;gap:5px;margin-top:6px}.actions button{flex:1;padding:7px;border:1px solid #ccc;border-radius:8px;background:white}.have{background:#dcfce7!important}.qty{margin-top:5px}.notice{padding:10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;margin:10px 0}
+@media(max-width:650px){.stats{grid-template-columns:1fr 1fr}.filters{grid-template-columns:1fr}.sets{grid-template-columns:1fr 1fr}.cards{grid-template-columns:1fr 1fr}}
+</style></head><body><div class="wrap">
+<header><div><div class="muted">Organizador Pokémon TCG</div><h1>Poké Coleção ⚡</h1></div><div class="pill">Mika</div></header>
+<div id="notice" class="notice">Carregando todas as coleções…</div>
+<div class="stats"><div class="box"><div class="muted">Tenho</div><div id="owned" class="big">0</div></div><div class="box"><div class="muted">Coleções</div><div id="setsN" class="big">—</div></div><div class="box"><div class="muted">Cartas</div><div id="cardsN" class="big">—</div></div><div class="box"><div class="muted">Progresso</div><div id="pct" class="big">0%</div></div></div>
+<section class="panel"><h2>📚 Todas as coleções</h2><div class="filters"><input id="q" placeholder="🔎 Buscar coleção"><select id="sf"><option value="all">Todas as séries</option></select></div><div id="sets" class="sets"></div></section>
+<section id="panel" class="panel" style="margin-top:12px;display:none"><h2 id="title"></h2><div id="meta" class="muted"></div><div class="filters"><input id="cq" placeholder="🔎 Buscar carta"><select id="cf"><option value="all">Todas</option><option value="owned">Tenho</option><option value="missing">Faltam</option><option value="fav">⭐ Favoritas</option></select></div><div id="cards" class="cards"></div></section>
+<p class="muted" style="font-size:12px">Catálogo e imagens via TCGdex. O aplicativo não é oficial da Pokémon.</p></div>
 <script>
-const API='https://api.tcgdex.net/v2/en';
-const USD_BRL=5.1025;
-const STORAGE='pokeColecaoV4';
-
-/* Nomes oficiais em inglês usados pela base TCGdex; a interface fica em português. */
-const WANTED=[
-  {match:'Mega Evolution—Pitch Black', pt:'Escuridão Absoluta', release:'17/07/2026'},
-  {match:'Mega Evolution—Chaos Rising', pt:'Caos Ascendente', release:'22/05/2026'},
-  {match:'Mega Evolution—Perfect Order', pt:'Equilíbrio Perfeito', release:'27/03/2026'},
-  {match:'Mega Evolution—Ascended Heroes', pt:'Heróis Excelsos', release:'30/01/2026'},
-  {match:'Mega Evolution—Phantasmal Flames', pt:'Fogo Fantasmagórico', release:'14/11/2025'}
-];
-
-let sets=[];
-let active=0;
-let db=JSON.parse(localStorage.getItem(STORAGE)||'{}');
-
-const $=s=>document.querySelector(s);
-const brl=n=>Number(n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
-const norm=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-const save=()=>localStorage.setItem(STORAGE,JSON.stringify(db));
-
-function ensure(c){
-  if(!db[c.id])db[c.id]={have:false,qty:0,fav:false,value:0};
-  return db[c.id];
-}
-function getMarketUSD(c){
-  const p=c.pricing?.tcgplayer;
-  if(!p)return null;
-  for(const k of ['normal','reverse','holo','reverse-holofoil','holofoil']){
-    if(p[k] && typeof p[k].marketPrice==='number')return p[k].marketPrice;
-  }
-  for(const k of ['marketPrice','market','mid']){
-    if(typeof p[k]==='number')return p[k];
-  }
-  return null;
-}
-function automaticPriceBRL(c){
-  const usd=getMarketUSD(c);
-  return usd==null?0:usd*USD_BRL;
-}
-function estimatedPrice(c){
-  const d=ensure(c);
-  return Number(d.value)>0?Number(d.value):automaticPriceBRL(c);
-}
-async function fetchJSON(url){
-  const r=await fetch(url,{cache:'no-store'});
-  if(!r.ok)throw new Error('HTTP '+r.status);
-  return r.json();
-}
-function findSet(all, wanted){
-  const exact=all.find(x=>norm(x.name)===norm(wanted.match));
-  if(exact)return exact;
-  return all.find(x=>norm(x.name).includes(norm(wanted.match)) || norm(wanted.match).includes(norm(x.name)));
-}
-
-async function load(){
-  try{
-    $('#notice').textContent='Encontrando as 5 coleções mais recentes…';
-
-    // Importante: não dependemos de IDs hardcoded. A própria API informa o ID correto.
-    const allSets=await fetchJSON(API+'/sets');
-    const found=WANTED.map(w=>({w, api:findSet(allSets,w)}));
-
-    const missing=found.filter(x=>!x.api);
-    if(missing.length)throw new Error('Coleções não encontradas: '+missing.map(x=>x.w.match).join(', '));
-
-    sets=[];
-    for(const item of found){
-      $('#notice').textContent='Carregando '+item.w.pt+'…';
-      const detail=await fetchJSON(API+'/sets/'+encodeURIComponent(item.api.id));
-      sets.push({
-        id:item.api.id,
-        name:item.api.name,
-        pt:item.w.pt,
-        release:item.w.release,
-        total:detail.cardCount?.total || detail.cards?.length || 0,
-        cards:(detail.cards||[]).map(c=>({...c,setId:item.api.id}))
-      });
-    }
-
-    $('#notice').style.display='none';
-    render();
-
-    // Preços e dados completos são carregados em segundo plano.
-    enrichPricing();
-  }catch(e){
-    console.error(e);
-    $('#notice').innerHTML='⚠️ Não consegui carregar as coleções. <b>Recarregue a página com internet ativa.</b><br><small>'+String(e.message||e)+'</small>';
-    if(sets.length)render();
-  }
-}
-
-async function enrichPricing(){
-  const all=sets.flatMap(s=>s.cards);
-  const batchSize=8;
-  for(let i=0;i<all.length;i+=batchSize){
-    await Promise.all(all.slice(i,i+batchSize).map(async c=>{
-      try{Object.assign(c,await fetchJSON(API+'/cards/'+encodeURIComponent(c.id)))}catch(e){}
-    }));
-    if(i%40===0)render();
-  }
-  render();
-}
-
-function totals(){
-  let total=sets.reduce((a,s)=>a+s.total,0),owned=0,value=0;
-  sets.forEach(s=>s.cards.forEach(c=>{
-    const d=ensure(c);
-    if(d.have){owned++;value+=estimatedPrice(c)*(Number(d.qty)||1)}
-  }));
-  return {total,owned,value};
-}
-function renderTabs(){
-  $('#tabs').innerHTML=sets.map((s,i)=>`<button class="tab ${i===active?'active':''}" data-i="${i}">${s.pt}</button>`).join('');
-  $('#tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{active=+b.dataset.i;render()});
-}
-function render(){
-  if(!sets.length)return;
-  renderTabs();
-  const s=sets[active],a=s.cards||[],owned=a.filter(c=>ensure(c).have).length,p=s.total?owned/s.total*100:0;
-  const t=totals();
-  $('#owned').textContent=t.owned;
-  $('#missing').textContent=t.total-t.owned;
-  $('#pct').textContent=t.total?(t.owned/t.total*100).toFixed(1)+'%':'0%';
-  $('#value').textContent=brl(t.value);
-  $('#setName').textContent=s.pt;
-  $('#setMeta').textContent=`${owned} de ${s.total} cartas • lançamento ${s.release}`;
-  $('#setPct').textContent=p.toFixed(1)+'%';
-  $('#bar').style.width=p+'%';
-  renderCards();
-}
-function imageFor(c){return c.image?c.image.replace(/\/$/,'')+'/high.webp':''}
-function renderCards(){
-  const term=norm($('#search').value),filter=$('#filter').value,s=sets[active];
-  let html='';
-  for(const c of s.cards){
-    const d=ensure(c),name=c.name||'Sem nome',id=c.localId||c.id,hay=norm(name+' '+id);
-    if(term&&!hay.includes(term))continue;
-    if(filter==='owned'&&!d.have)continue;
-    if(filter==='missing'&&d.have)continue;
-    if(filter==='favorite'&&!d.fav)continue;
-    const img=imageFor(c),ep=estimatedPrice(c),usd=getMarketUSD(c);
-    html+=`<article class="card">
-      ${img?`<img src="${img}" alt="${name}" loading="lazy" onerror="this.style.display='none'">`:`<div style="aspect-ratio:.716;background:#eef2f7;display:grid;place-items:center;color:#6b7280">Imagem indisponível</div>`}
-      <div class="cardbody">
-        <div class="num">#${id}</div><div class="name">${name}</div>
-        <div class="rarity">${c.rarity||'Raridade não informada'}${usd!=null?' • US$ '+usd.toFixed(2):''}</div>
-        <div class="actions">
-          <button class="${d.have?'have':''}" data-have="${c.id}">${d.have?'✅ Tenho':'＋ Tenho'}</button>
-          <button data-fav="${c.id}">${d.fav?'⭐':'☆'}</button>
-        </div>
-        <input class="qty" data-qty="${c.id}" type="number" min="0" max="99" value="${d.qty||0}" aria-label="Quantidade">
-        <div style="font-size:12px;margin-top:6px"><b>Estimado:</b> ${ep>0?brl(ep):'sem cotação'}</div>
-        <input class="qty" data-value="${c.id}" type="number" min="0" step=".01" value="${d.value||''}" placeholder="Valor próprio (opcional)" aria-label="Valor próprio">
-      </div></article>`;
-  }
-  $('#cards').innerHTML=html||'<div class="muted">Nenhuma carta encontrada.</div>';
-  $('#cards').querySelectorAll('[data-have]').forEach(b=>b.onclick=()=>{
-    const c=findCard(b.dataset.have),d=ensure(c);d.have=!d.have;if(d.have&&!d.qty)d.qty=1;save();render();
-  });
-  $('#cards').querySelectorAll('[data-fav]').forEach(b=>b.onclick=()=>{
-    const c=findCard(b.dataset.fav),d=ensure(c);d.fav=!d.fav;save();renderCards();
-  });
-  $('#cards').querySelectorAll('[data-qty]').forEach(i=>i.oninput=()=>{
-    const c=findCard(i.dataset.qty),d=ensure(c);d.qty=Math.max(0,Math.min(99,Number(i.value)||0));d.have=d.qty>0;save();render();
-  });
-  $('#cards').querySelectorAll('[data-value]').forEach(i=>i.oninput=()=>{
-    const c=findCard(i.dataset.value),d=ensure(c);d.value=Math.max(0,Number(i.value)||0);save();render();
-  });
-}
-function findCard(id){
-  for(const s of sets){const c=s.cards.find(x=>x.id===id);if(c)return c}
-  return {id};
-}
-$('#search').oninput=renderCards;
-$('#filter').onchange=renderCards;
-load();
-</script>
-</body>
-</html>
+const A='https://api.tcgdex.net/v2/en',K='pokeColecaoV5';let sets=[],cache={},active=null,db=JSON.parse(localStorage.getItem(K)||'{}');
+const $=x=>document.querySelector(x),N=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function d(id){return db[id]||(db[id]={have:false,qty:0,fav:false})}function save(){localStorage.setItem(K,JSON.stringify(db))}
+async function get(u){let r=await fetch(u,{cache:'no-store'});if(!r.ok)throw Error(r.status);return r.json()}
+async function init(){try{sets=await get(A+'/sets');let sr=await get(A+'/series'),m={};sr.forEach(s=>(s.sets||[]).forEach(x=>m[x.id]=s.name));sets.forEach(s=>s.seriesName=m[s.id]||'Outras');let names=[...new Set(sets.map(s=>s.seriesName))].sort();$('#sf').innerHTML='<option value="all">Todas as séries</option>'+names.map(x=>'<option>'+x+'</option>').join('');$('#notice').style.display='none';$('#setsN').textContent=sets.length;$('#cardsN').textContent=sets.reduce((n,s)=>n+(s.cardCount?.total||0),0).toLocaleString('pt-BR');renderSets();stats()}catch(e){$('#notice').textContent='Não consegui carregar o catálogo. Recarregue com internet ativa.'}}
+function renderSets(){let q=N($('#q').value),sf=$('#sf').value;let a=sets.filter(s=>(sf==='all'||s.seriesName===sf)&&(!q||N(s.name).includes(q)));$('#sets').innerHTML=a.map(s=>'<button class="set" data-id="'+s.id+'">'+(s.logo?'<img src="'+s.logo+'.webp">':'')+'<b>'+s.name+'</b><small>'+s.seriesName+' • '+(s.cardCount?.total||0)+' cartas</small></button>').join('');document.querySelectorAll('.set').forEach(b=>b.onclick=()=>openSet(b.dataset.id))}
+async function openSet(id){active=sets.find(s=>s.id===id);$('#panel').style.display='block';$('#title').textContent=active.name;$('#meta').textContent=active.seriesName+' • '+active.cardCount.total+' cartas';$('#cards').innerHTML='<p class="muted">Carregando cartas…</p>';if(!cache[id])cache[id]=(await get(A+'/sets/'+id)).cards||[];renderCards();$('#panel').scrollIntoView({behavior:'smooth'})}
+function stats(){let o=Object.values(db).filter(x=>x.have||x.qty>0).length,total=sets.reduce((n,s)=>n+(s.cardCount?.total||0),0);$('#owned').textContent=o;$('#pct').textContent=total?(o/total*100).toFixed(1)+'%':'0%'}
+function renderCards(){let a=cache[active.id]||[],q=N($('#cq').value),f=$('#cf').value;a.forEach(c=>{if(!c._f)get(A+'/cards/'+c.id).then(x=>{Object.assign(c,x);c._f=1;renderCards()}).catch(()=>{})});a=a.filter(c=>{let x=d(c.id),h=N((c.name||'')+' '+(c.localId||''));return(!q||h.includes(q))&&(f==='all'||f==='owned'&&x.have||f==='missing'&&!x.have||f==='fav'&&x.fav)});$('#cards').innerHTML=a.map(c=>{let x=d(c.id),img=c.image?c.image.replace(/\/$/,'')+'/high.webp':'';return '<article class="card">'+(img?'<img src="'+img+'" loading="lazy">':'')+'<div class="body"><small>#'+(c.localId||'')+'</small><b>'+ (c.name||'Carregando…')+'</b><div class="actions"><button class="'+(x.have?'have':'')+'" data-h="'+c.id+'">'+(x.have?'✅ Tenho':'＋ Tenho')+'</button><button data-f="'+c.id+'">'+(x.fav?'⭐':'☆')+'</button></div><input class="qty" data-q="'+c.id+'" type="number" min="0" value="'+(x.qty||0)+'" placeholder="Quantidade"></div></article>'}).join('');document.querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{let x=d(b.dataset.h);x.have=!x.have;if(x.have&&!x.qty)x.qty=1;save();renderCards();stats()});document.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{d(b.dataset.f).fav=!d(b.dataset.f).fav;save();renderCards()});document.querySelectorAll('[data-q]').forEach(i=>i.oninput=()=>{let x=d(i.dataset.q);x.qty=+i.value||0;x.have=x.qty>0;save();renderCards();stats()})}
+$('#q').oninput=renderSets;$('#sf').onchange=renderSets;$('#cq').oninput=renderCards;$('#cf').onchange=renderCards;init();
+</script></body></html>
